@@ -152,49 +152,75 @@ const generateAudioFolder = async (writer, grade, group) => {
             const mediaSavePath = `${mediaBasePath}\\${audioType}1.mp3`;
 
             if (audioFileList.length === 2) {
-              mediaPaths.push(mediaSavePath);
-              tasks.push(
-                new Promise((resolve, reject) => {
-                  createSilence(duration, (err, silenceFilePath) => {
-                    if (err) {
-                      console.error("Failed to create silence file:", err);
-                      reject(err);
-                      return;
-                    }
+              let aNum = 0;
+              let bNum = 0;
 
-                    const mp3OriginFilePath1 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${
-                      !audioFileList[0].includes("B") &&
-                      !audioFileList[1].includes("B")
-                        ? audioFileList[0]
-                        : audioFileList[0].includes("B")
-                        ? audioFileList[1]
-                        : audioFileList[0]
-                    }.mp3`;
-                    const mp3OriginFilePath2 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${
-                      !audioFileList[0].includes("B") &&
-                      !audioFileList[1].includes("B")
-                        ? audioFileList[1]
-                        : audioFileList[0].includes("B")
-                        ? audioFileList[0]
-                        : audioFileList[1]
-                    }.mp3`;
+              if (audioFileList[0].includes("A")) aNum += 1;
+              if (audioFileList[0].includes("B")) bNum += 1;
+              if (audioFileList[1].includes("A")) aNum += 1;
+              if (audioFileList[1].includes("B")) bNum += 1;
 
-                    concatenateMP3Files(
-                      [mp3OriginFilePath1, silenceFilePath, mp3OriginFilePath2],
-                      mediaSavePath,
-                      (err) => {
-                        if (err) {
-                          console.error("Failed to concatenate files:", err);
-                          reject(err);
-                        } else {
-                          resolve();
-                        }
+              if (aNum === 1 && bNum === 1) {
+                mediaPaths.push(mediaSavePath);
+                tasks.push(
+                  new Promise((resolve, reject) => {
+                    createSilence(duration, (err, silenceFilePath) => {
+                      if (err) {
+                        console.error("Failed to create silence file:", err);
+                        reject(err);
+                        return;
                       }
-                    );
-                  });
-                })
-              );
-            } else {
+
+                      const mp3OriginFilePath1 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${
+                        !audioFileList[0].includes("B") &&
+                        !audioFileList[1].includes("B")
+                          ? audioFileList[0]
+                          : audioFileList[0].includes("B")
+                          ? audioFileList[1]
+                          : audioFileList[0]
+                      }.mp3`;
+                      const mp3OriginFilePath2 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${
+                        !audioFileList[0].includes("B") &&
+                        !audioFileList[1].includes("B")
+                          ? audioFileList[1]
+                          : audioFileList[0].includes("B")
+                          ? audioFileList[0]
+                          : audioFileList[1]
+                      }.mp3`;
+
+                      concatenateMP3Files(
+                        [
+                          mp3OriginFilePath1,
+                          silenceFilePath,
+                          mp3OriginFilePath2,
+                        ],
+                        mediaSavePath,
+                        (err) => {
+                          if (err) {
+                            console.error("Failed to concatenate files:", err);
+                            reject(err);
+                          } else {
+                            resolve();
+                          }
+                        }
+                      );
+                    });
+                  })
+                );
+              } else if (aNum === 2 && bNum === 0) {
+                const mp3OriginFilePath = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${audioFileList[0]}.mp3`;
+                tasks.push(
+                  new Promise((resolve) => {
+                    copyAndRenameFile(mp3OriginFilePath, mediaSavePath);
+                    resolve();
+                  })
+                );
+              } else {
+                console.log(
+                  `media ${audioType} length conflict: aNum = ${aNum}, bNum = ${bNum}`
+                );
+              }
+            } else if (audioFileList.length === 1) {
               const mp3OriginFilePath = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${audioFileList[0]}.mp3`;
               tasks.push(
                 new Promise((resolve) => {
@@ -202,6 +228,8 @@ const generateAudioFolder = async (writer, grade, group) => {
                   resolve();
                 })
               );
+            } else {
+              console.log(`media ${audioType} length over 2`);
             }
           } else if (audioType === "c") {
             let choiceList = {};
