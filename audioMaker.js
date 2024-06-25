@@ -145,6 +145,9 @@ const generateAudioFolder = async (writer, grade, group) => {
         Object.entries(audio).forEach((audioSource) => {
           const audioType = audioSource[0];
           const audioFileList = audioSource[1];
+
+          //  q,c구문 판별 로직
+
           if (audioType === "q") {
             const mediaSavePath = `${mediaBasePath}\\${audioType}1.mp3`;
 
@@ -205,14 +208,13 @@ const generateAudioFolder = async (writer, grade, group) => {
             let mergeBaseFile = "";
             audioFileList.forEach((file) => {
               const split = file.split("_");
-
               if (split.length !== 5) {
                 console.log("Error: media name is strange");
               } else {
                 const choiceNum = split[3];
                 const article = split[4];
 
-                if (choiceNum === "01" && article === "B") mergeBaseFile = file;
+                if (choiceNum === "01" && article === "A") mergeBaseFile = file;
 
                 if (choiceList[choiceNum]) {
                   choiceList[choiceNum].push(file);
@@ -224,7 +226,6 @@ const generateAudioFolder = async (writer, grade, group) => {
                 }
               }
             });
-
             Object.entries(choiceList).forEach((data, i) => {
               const choiceNum = data[0];
               const files = data[1];
@@ -244,10 +245,9 @@ const generateAudioFolder = async (writer, grade, group) => {
                   console.log("Error: No Base file");
                   return;
                 } else {
-                  choiceList[`0${i}`].push(mergeBaseFile);
+                  choiceList[choiceNum].unshift(mergeBaseFile);
                 }
               }
-
               const choiceFileList = choiceList[choiceNum];
               const mediaSavePath = `${mediaBasePath}\\${audioType}${Number(
                 choiceNum
