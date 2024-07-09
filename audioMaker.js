@@ -9,37 +9,6 @@ const basePath = "D:\\aidt\\aidt-contents\\resource";
 const inputDir = "C:\\Users\\silen\\Desktop\\audioMaker\\audios";
 const destDir = "D:\\aidt\\audioFiles";
 const duration = 0.6;
-const rule = {
-  ham: {
-    3: {
-      L1H: {
-        type: "c",
-      },
-      L1M: {
-        type: "c",
-      },
-      L2: {
-        type: "c",
-      },
-      L3: {
-        type: "q",
-      },
-      L4: { type: "q" },
-      S1: { type: "q" },
-      S3: { type: "q" },
-      S5: { type: "q" },
-    },
-    4: {},
-  },
-  kim: {
-    3: {},
-    4: {},
-  },
-  lee: {
-    3: {},
-    4: {},
-  },
-};
 
 const ensureDirectoryExistence = (filePath) => {
   if (fs.existsSync(filePath)) {
@@ -612,6 +581,7 @@ const importExel = async (writer, grade) => {
   Object.entries(group[writer][grade]).map((chapter) => {
     console.log(`${chapter[0]}: `, chapter[1]);
   });
+
   try {
     await generateAudioFolder(writer, grade, group);
     await cleanUpSilenceFile();
@@ -641,7 +611,7 @@ const importExel = async (writer, grade) => {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const list = ["lee:4"];
+const list = ["ham:3"];
 for (let i = 0; i < list.length; i++) {
   const split = list[i].split(":");
   const writer = split[0];
