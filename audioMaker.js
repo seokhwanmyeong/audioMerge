@@ -106,12 +106,84 @@ const generateAudioFolder = async (writer, grade, group) => {
           const audioType = audioSource[0];
           const audioFileList = audioSource[1];
 
-          //  q,c구문 판별 로직
-
           if (audioType === "q") {
             const mediaSavePath = `${mediaBasePath}\\${audioType}1.mp3`;
 
-            if (audioFileList.length === 3) {
+            if (audioFileList.length === 4) {
+              let aNum = 0;
+              let bNum = 0;
+              let cNum = 0;
+              let dNum = 0;
+              let firstAudio;
+              let secondAudio;
+              let thirdAudio;
+              let forthAudio;
+
+              audioFileList.map((file, idx) => {
+                const abs = file.split("_")[2];
+
+                if (abs === "A") {
+                  firstAudio = file;
+                  aNum += 1;
+                } else if (abs === "B") {
+                  secondAudio = file;
+                  bNum += 1;
+                } else if (abs === "C") {
+                  thirdAudio = file;
+                  cNum += 1;
+                } else if (abs === "D") {
+                  forthAudio = file;
+                  dNum += 1;
+                } else {
+                  console.log(`${id} media ${file} ABC Type conflict`);
+                }
+              });
+
+              if (aNum === 1 && bNum === 1 && cNum === 1 && dNum === 1) {
+                mediaPaths.push(mediaSavePath);
+                tasks.push(
+                  new Promise((resolve, reject) => {
+                    createSilence(duration, (err, silenceFilePath) => {
+                      if (err) {
+                        console.error("Failed to create silence file:", err);
+                        reject(err);
+                        return;
+                      }
+
+                      const mp3OriginFilePath1 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${firstAudio}.mp3`;
+                      const mp3OriginFilePath2 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${secondAudio}.mp3`;
+                      const mp3OriginFilePath3 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${thirdAudio}.mp3`;
+                      const mp3OriginFilePath4 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${forthAudio}.mp3`;
+
+                      concatenateMP3Files(
+                        [
+                          mp3OriginFilePath1,
+                          silenceFilePath,
+                          mp3OriginFilePath2,
+                          silenceFilePath,
+                          mp3OriginFilePath3,
+                          silenceFilePath,
+                          mp3OriginFilePath4,
+                        ],
+                        mediaSavePath,
+                        (err) => {
+                          if (err) {
+                            console.error("Failed to concatenate files:", err);
+                            reject(err);
+                          } else {
+                            resolve();
+                          }
+                        }
+                      );
+                    });
+                  })
+                );
+              } else {
+                console.log(
+                  `${id} media ${audioType} ABCD Type conflict: aNum = ${aNum}, bNum = ${bNum}, cNum = ${cNum}, dNum = ${dNum}, file: ${audioFileList}`
+                );
+              }
+            } else if (audioFileList.length === 3) {
               let aNum = 0;
               let bNum = 0;
               let cNum = 0;
@@ -246,7 +318,7 @@ const generateAudioFolder = async (writer, grade, group) => {
                 })
               );
             } else {
-              console.log(`${id} media ${audioType} length over 3`);
+              console.log(`${id} media ${audioType} length over 4`);
             }
           } else if (audioType === "c") {
             let choiceList = {};
@@ -285,6 +357,7 @@ const generateAudioFolder = async (writer, grade, group) => {
               let Afile = null;
               let Bfile = null;
               let Cfile = null;
+              let Dfile = null;
 
               files.forEach((file) => {
                 const abc = file.split("_")[2];
@@ -306,6 +379,14 @@ const generateAudioFolder = async (writer, grade, group) => {
                   } else {
                     Cfile = file;
                   }
+                } else if (abc === "D") {
+                  if (Dfile) {
+                    console.log(`Error: already exist Dfile: ${file}`);
+                  } else {
+                    Dfile = file;
+                  }
+                } else {
+                  console.log(`media ${file} is not ABCD Type conflict`);
                 }
               });
 
@@ -313,7 +394,45 @@ const generateAudioFolder = async (writer, grade, group) => {
                 choiceNum
               )}.mp3`;
 
-              if (Afile && Bfile && Cfile) {
+              if (Afile && Bfile && Cfile && Dfile) {
+                mediaPaths.push(mediaSavePath);
+                tasks.push(
+                  new Promise((resolve, reject) => {
+                    createSilence(duration, (err, silenceFilePath) => {
+                      if (err) {
+                        console.error("Failed to create silence file:", err);
+                        reject(err);
+                        return;
+                      }
+                      const mp3OriginFilePath1 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${Afile}.mp3`;
+                      const mp3OriginFilePath2 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${Bfile}.mp3`;
+                      const mp3OriginFilePath3 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${Cfile}.mp3`;
+                      const mp3OriginFilePath4 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${Dfile}.mp3`;
+
+                      concatenateMP3Files(
+                        [
+                          mp3OriginFilePath1,
+                          silenceFilePath,
+                          mp3OriginFilePath2,
+                          silenceFilePath,
+                          mp3OriginFilePath3,
+                          silenceFilePath,
+                          mp3OriginFilePath4,
+                        ],
+                        mediaSavePath,
+                        (err) => {
+                          if (err) {
+                            console.error("Failed to concatenate files:", err);
+                            reject(err);
+                          } else {
+                            resolve();
+                          }
+                        }
+                      );
+                    });
+                  })
+                );
+              } else if (Afile && Bfile && Cfile) {
                 mediaPaths.push(mediaSavePath);
                 tasks.push(
                   new Promise((resolve, reject) => {
@@ -466,7 +585,7 @@ const generateAudioFolder = async (writer, grade, group) => {
                   })
                 );
               } else {
-                console.log(`Error: No Exist A/B/C : ${files}`);
+                console.log(`Error: Strange fileList : ${files}`);
                 return;
               }
             });
@@ -515,7 +634,7 @@ const importExel = async (writer, grade) => {
     }
   }
   fileList.push(...fileNamesInColumn);
-  console.log("fileList", fileList);
+  // console.log("fileList", fileList);
   const group = {
     [writer]: {
       [grade]: {},
@@ -578,9 +697,9 @@ const importExel = async (writer, grade) => {
     }
   });
 
-  Object.entries(group[writer][grade]).map((chapter) => {
-    console.log(`${chapter[0]}: `, chapter[1]);
-  });
+  // Object.entries(group[writer][grade]).map((chapter) => {
+  //   console.log(`${chapter[0]}: `, chapter[1]);
+  // });
 
   try {
     await generateAudioFolder(writer, grade, group);
@@ -611,7 +730,7 @@ const importExel = async (writer, grade) => {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const list = ["ham:3"];
+const list = ["kim:3"];
 for (let i = 0; i < list.length; i++) {
   const split = list[i].split(":");
   const writer = split[0];
