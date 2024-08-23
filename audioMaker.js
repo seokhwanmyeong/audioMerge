@@ -5,11 +5,34 @@ const ffprobePath = require("ffprobe-static").path;
 const path = require("path");
 const fs = require("fs");
 const { decode_range, encode_cell } = utils;
+/**
+ * @type {string} 합칠 오디오 원본로컬경로 (from aidt-contents)
+ * repository: https://github.com/dn-soft/aidt-contents
+ */
 const basePath = "D:\\aidt\\aidt-contents\\resource";
-const inputDir = "C:\\Users\\silen\\Desktop\\audioMaker\\audios";
+// const basePath = "C:\\Users\\silen\\Desktop\\aidt\\aidt-contents\\resource";
+/**
+ * @type {string} 생성파일 임시 저장 경로
+ */
+const inputDir = "D:\\aidt\\audioMerge\\audios";
+/**
+ * @type {string} 저장할 폴더 경로
+ */
 const destDir = "D:\\aidt\\audioFiles";
+// const destDir = "C:\\Users\\silen\\Desktop\\aidt\\audioFiles";
+/**
+ * @type {number} 합치는 audio사이 공백시간
+ */
 const duration = 0.6;
+/**
+ * @type {["kim:3", "kim:4", "lee:3", "lee:4", "ham:3", "ham:4"]} 오디오 병합할 저자:학년 리스트
+ */
+const list = ["kim:3"];
 
+/**
+ * @description fuction: 해당 경로에 폴더가 있는지 검사
+ * @param {string} filePath 폴더 경로
+ */
 const ensureDirectoryExistence = (filePath) => {
   if (fs.existsSync(filePath)) {
     return true;
@@ -18,6 +41,11 @@ const ensureDirectoryExistence = (filePath) => {
   }
 };
 
+/**
+ * @description fuction: 공백 오디오 파일 임시 생성
+ * @param {number} duration 저자
+ * @param {(err: string | null, filePath: string) => void} callback
+ */
 const createSilence = (duration, callback) => {
   const silenceFilePath = path.join(destDir, `silence_${Date.now()}.mp3`);
   ffmpeg()
@@ -36,6 +64,12 @@ const createSilence = (duration, callback) => {
     .run();
 };
 
+/**
+ * @description fuction: 공백 오디오 파일 임시 생성
+ * @param {string[]} inputFiles 합칠 오디오 파일 리스트
+ * @param {string} outputFile 결과 파일 저장 경로
+ * @param {(err: string | null) => void} callback
+ */
 const concatenateMP3Files = (inputFiles, outputFile, callback) => {
   const command = ffmpeg();
 
@@ -55,6 +89,11 @@ const concatenateMP3Files = (inputFiles, outputFile, callback) => {
     .mergeToFile(outputFile, path.join(inputDir, "tempDir"));
 };
 
+/**
+ * @description fuction: 파일 이름변경 및 복사
+ * @param {string} source 파일 원본 경로
+ * @param {string} destination 저장할 경로
+ */
 const copyAndRenameFile = (source, destination) => {
   fs.copyFile(source, destination, (err) => {
     if (err) {
@@ -65,6 +104,9 @@ const copyAndRenameFile = (source, destination) => {
   });
 };
 
+/**
+ * @description fuction: 임시 생성한 공백 오디오 파일 제거
+ */
 const cleanUpSilenceFile = async () => {
   const silenceFiles = fs
     .readdirSync(destDir)
@@ -84,8 +126,22 @@ const cleanUpSilenceFile = async () => {
   await Promise.all(tasks);
 };
 
+/**
+ * @description fuction: 오디오 병합 함수.
+ *              원본 파일명.split("_")[2] 에 합치는 순서가 알파벳으로 존재 = A, B, C, D, E.
+ *              순서대로 합본 필요
+ * @param {"lee" | "kim" | "ham"} writer 저자
+ * @param {3 | 4} grade 학년
+ * @param {group} group 학년
+ */
 const generateAudioFolder = async (writer, grade, group) => {
+  /**
+   * @type {(PromiseConstructor[] | [])} 오디오 병합 및 복사 stack
+   */
   const tasks = [];
+  /**
+   * @type {string[]} 결과 파일 목록
+   */
   const mediaPaths = [];
 
   try {
@@ -250,14 +306,12 @@ const generateAudioFolder = async (writer, grade, group) => {
                 );
               }
             } else if (audioFileList.length === 2) {
-              const fistAB = audioFileList[0].split("_")[2];
-              const secondAB = audioFileList[1].split("_")[2];
               let aNum = 0;
               let bNum = 0;
               let firstAudio;
               let secondAudio;
 
-              audioFileList.map((file, idx) => {
+              audioFileList.map((file) => {
                 const abs = file.split("_")[2];
 
                 if (abs === "A") {
@@ -469,7 +523,7 @@ const generateAudioFolder = async (writer, grade, group) => {
                 );
               } else if (!Afile && Bfile && Cfile) {
                 if (!mergeBaseFile) {
-                  console.log("Error: No Base file");
+                  console.log(`Error: No Base file: ${id}`);
                   return;
                 }
 
@@ -509,7 +563,7 @@ const generateAudioFolder = async (writer, grade, group) => {
                 );
               } else if (!Afile && Bfile && !Cfile) {
                 if (!mergeBaseFile) {
-                  console.log("Error: No Base file");
+                  console.log(`Error: No Base file: ${id}`);
                   return;
                 }
 
@@ -589,6 +643,67 @@ const generateAudioFolder = async (writer, grade, group) => {
                 return;
               }
             });
+          } else if (audioType === "a") {
+            const mediaSavePath = `${mediaBasePath}\\${audioType}.mp3`;
+            let aNum = 0;
+            let bNum = 0;
+            let firstAudio;
+            let secondAudio;
+
+            audioFileList.map((file) => {
+              const abs = file.split("_")[2];
+
+              if (abs === "A") {
+                firstAudio = file;
+                aNum += 1;
+              } else if (abs === "B") {
+                secondAudio = file;
+                bNum += 1;
+              } else {
+                console.log(`${id} media ${file} ABC Type conflict`);
+              }
+            });
+
+            if (audioFileList.length > 2) {
+              console.log(`${id} Answer media ${audioFileList} over 2`);
+            } else if (audioFileList.length === 2) {
+              mediaPaths.push(mediaSavePath);
+              tasks.push(
+                new Promise((resolve, reject) => {
+                  createSilence(duration, (err, silenceFilePath) => {
+                    if (err) {
+                      console.error("Failed to create silence file:", err);
+                      reject(err);
+                      return;
+                    }
+
+                    const mp3OriginFilePath1 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${firstAudio}.mp3`;
+                    const mp3OriginFilePath2 = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${secondAudio}.mp3`;
+
+                    concatenateMP3Files(
+                      [mp3OriginFilePath1, silenceFilePath, mp3OriginFilePath2],
+                      mediaSavePath,
+                      (err) => {
+                        if (err) {
+                          console.error("Failed to concatenate files:", err);
+                          reject(err);
+                        } else {
+                          resolve();
+                        }
+                      }
+                    );
+                  });
+                })
+              );
+            } else {
+              const mp3OriginFilePath = `${basePath}\\${writer}\\g${grade}_voice\\${quizeType}\\${audioFileList[0]}.mp3`;
+              tasks.push(
+                new Promise((resolve) => {
+                  copyAndRenameFile(mp3OriginFilePath, mediaSavePath);
+                  resolve();
+                })
+              );
+            }
           } else {
             console.log(
               `Error: no media Type Data: ${audioSource[0]}, ${audioSource[1]}`
@@ -609,6 +724,11 @@ const generateAudioFolder = async (writer, grade, group) => {
   }
 };
 
+/**
+ * @description fuction: Exel import 및 분류
+ * @param {"lee" | "kim" | "ham"} writer 저자
+ * @param {3 | 4} grade 학년
+ */
 const importExel = async (writer, grade) => {
   const startTime = new Date();
   console.log(
@@ -617,15 +737,21 @@ const importExel = async (writer, grade) => {
   const filePath = path.join(
     basePath,
     `${writer}\\g${grade}_voice\\voice.xlsx`
-  );
+  ); // Exel 리소스 경로
   const workbook = readFile(filePath);
-  const fileList = [];
   const sheet = workbook.Sheets["Sheet1"];
   const range = decode_range(sheet["!ref"]);
   const thirdColumn = 2;
-  const fileNamesInColumn = [];
   const baseNumMapping = { 2: "lee", 1: "ham", 3: "kim" };
+  const fileNamesInColumn = [];
+  const fileList = [];
+  const group = {
+    [writer]: {
+      [grade]: {},
+    },
+  };
 
+  //  엑셀에서 파일명 리스트 추출
   for (let R = range.s.r; R <= range.e.r; ++R) {
     const cellAddress = encode_cell({ r: R, c: thirdColumn });
     const cell = sheet[cellAddress];
@@ -633,14 +759,27 @@ const importExel = async (writer, grade) => {
       fileNamesInColumn.push(cell.v);
     }
   }
-  fileList.push(...fileNamesInColumn);
-  // console.log("fileList", fileList);
-  const group = {
-    [writer]: {
-      [grade]: {},
-    },
-  };
 
+  fileList.push(...fileNamesInColumn);
+
+  /**
+   * 1. group으로 분류
+   * 2. audioType == "00"은 문제 오디오 파일
+   * 3. Number(audioType) 최대값 === 4, 그 외 값은 무시
+   *
+   * type group = {
+   *    [writer: "kim" | "lee" | "ham"]: {
+   *      [grade: 3 | 4]: {
+   *        [chapter: number]: {
+   *          [id: string]: {
+   *            q?: <string>[]  // 문제 filename insert
+   *            c?: <string>[]  // 선택지 filename insert
+   *          }
+   *        }
+   *      }
+   *    }
+   * }
+   */
   fileList.map((fileName) => {
     const split = fileName.split("_");
 
@@ -652,7 +791,31 @@ const importExel = async (writer, grade) => {
       const grade = id[1];
       const chapter = Number(id.slice(2, 4));
 
-      if (Number(audioType) > 4) {
+      if (
+        Number(audioType) === 9 &&
+        (id?.includes("S") || id?.includes("A2") || id?.includes("P3"))
+      ) {
+        if (group[writer][grade]?.[chapter]?.[id]) {
+          group[writer][grade][chapter][id].a = group[writer][grade]?.[
+            chapter
+          ]?.[id].a
+            ? [...group[writer][grade]?.[chapter]?.[id].a, fileName]
+            : [fileName];
+        } else if (group[writer][grade]?.[chapter]) {
+          group[writer][grade][chapter] = {
+            ...group[writer][grade][chapter],
+            [id]: {
+              a: [fileName],
+            },
+          };
+        } else {
+          group[writer][grade][chapter] = {
+            [id]: {
+              a: [fileName],
+            },
+          };
+        }
+      } else if (Number(audioType) > 4) {
         return;
       } else if (group[writer][grade]?.[chapter]?.[id]) {
         if (audioType == "00") {
@@ -697,8 +860,26 @@ const importExel = async (writer, grade) => {
     }
   });
 
-  // Object.entries(group[writer][grade]).map((chapter) => {
-  //   console.log(`${chapter[0]}: `, chapter[1]);
+  Object.entries(group?.[writer]?.[grade]).map((data) => {
+    const chpData = data[1];
+
+    Object.entries(chpData).map((chpD) => {
+      const id = chpD[0];
+      const keys = Object.keys(chpD[1]);
+
+      if (id.includes("S") || id.includes("A2") || id.includes("P3")) {
+        if (!keys.includes("a")) console.log(`${id}: no Answer MP3`);
+      }
+    });
+  });
+
+  // const jsonData = JSON.stringify(group);
+  // fs.writeFile("output.json", jsonData, (err) => {
+  //   if (err) {
+  //     console.error("Error writing file:", err);
+  //   } else {
+  //     console.log("JSON file has been saved.");
+  //   }
   // });
 
   try {
@@ -730,7 +911,6 @@ const importExel = async (writer, grade) => {
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
 
-const list = ["kim:3"];
 for (let i = 0; i < list.length; i++) {
   const split = list[i].split(":");
   const writer = split[0];
