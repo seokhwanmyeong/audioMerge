@@ -3,18 +3,32 @@ const ffmpegPath = require("ffmpeg-static");
 const ffprobePath = require("ffprobe-static").path;
 const path = require("path");
 const fs = require("fs");
+/**
+ * @type {string} 편집할 진단평가 음원 원본 폴더 경로
+ */
 const basePath = "D:\\aidt\\진단평가\\audio";
+/**
+ * @type {string} 임시 저장 경로
+ */
 const inputDir = "D:\\aidt\\audioMerge\\audios";
+/**
+ * @type {string} 저장할 진단평가 폴더 경로
+ */
 const destDir = "D:\\aidt\\진단평가\\aidt-check";
+/**
+ * @type {string[]} 편집할 진단평가 음원 원본 폴더 상세 경로
+ */
+const directoryPaths = [`${basePath}\\Ham\\Ham3`, `${basePath}\\Ham\\Ham4`, `${basePath}\\Lee\\Lee3`, `${basePath}\\Lee\\Lee4`, `${basePath}\\Kim\\Kim3`, `${basePath}\\Kim\\Kim4`];
+/**
+ * @type {number} 합치는 audio사이 공백시간
+ */
 const duration = 0.6;
 
+/**
+ * @description fuction: 해당 경로에 폴더가 있는지 검사
+ * @param {string} filePath 폴더 경로
+ */
 const ensureDirectoryExistence = (filePath) => {
-  // if (fs.existsSync(filePath)) {
-  //   return true;
-  // } else {
-  //   console.log(`No Exist File: ${filePath}`);
-  // }
-
   if (fs.existsSync(filePath)) {
     return true;
   } else {
@@ -22,6 +36,11 @@ const ensureDirectoryExistence = (filePath) => {
   }
 };
 
+/**
+ * @description fuction: 공백 오디오 파일 임시 생성
+ * @param {number} duration 저자
+ * @param {(err: string | null, filePath: string) => void} callback
+ */
 const createSilence = (duration, callback) => {
   const silenceFilePath = path.join(destDir, `silence_${Date.now()}.mp3`);
   ffmpeg()
@@ -40,6 +59,12 @@ const createSilence = (duration, callback) => {
     .run();
 };
 
+/**
+ * @description fuction: 공백 오디오 파일 임시 생성
+ * @param {string[]} inputFiles 합칠 오디오 파일 리스트
+ * @param {string} outputFile 결과 파일 저장 경로
+ * @param {(err: string | null) => void} callback
+ */
 const concatenateMP3Files = (inputFiles, outputFile, callback) => {
   const command = ffmpeg();
 
@@ -59,6 +84,11 @@ const concatenateMP3Files = (inputFiles, outputFile, callback) => {
     .mergeToFile(outputFile, path.join(inputDir, "tempDir"));
 };
 
+/**
+ * @description fuction: 파일 이름변경 및 복사
+ * @param {string} source 파일 원본 경로
+ * @param {string} destination 저장할 경로
+ */
 const copyAndRenameFile = (source, destination) => {
   fs.copyFile(source, destination, (err) => {
     if (err) {
@@ -69,10 +99,11 @@ const copyAndRenameFile = (source, destination) => {
   });
 };
 
+/**
+ * @description fuction: 임시 생성한 공백 오디오 파일 제거
+ */
 const cleanUpSilenceFile = async () => {
-  const silenceFiles = fs
-    .readdirSync(destDir)
-    .filter((file) => file.startsWith("silence_"));
+  const silenceFiles = fs.readdirSync(destDir).filter((file) => file.startsWith("silence_"));
   const tasks = silenceFiles.map((file) => {
     return new Promise((resolve, reject) => {
       const filePath = path.join(destDir, file);
@@ -88,13 +119,15 @@ const cleanUpSilenceFile = async () => {
   await Promise.all(tasks);
 };
 
+/**
+ * @description fuction: 파일명을 비교하여 순서대로 sort
+ * @param {string[]} fileNames 파일명 배열
+ */
 const sortFileNames = (fileNames) => {
   return fileNames.sort((a, b) => {
     const parseFileName = (file) => {
       const nameWithoutExtension = file.replace(".mp3", "");
-      return nameWithoutExtension
-        .split(/_|\.|e/)
-        .map((part) => (isNaN(part) ? part : parseInt(part, 10)));
+      return nameWithoutExtension.split(/_|\.|e/).map((part) => (isNaN(part) ? part : parseInt(part, 10)));
     };
 
     const partsA = parseFileName(a);
@@ -167,9 +200,7 @@ const generateAudioFolder = async (fileList) => {
                       const concateFiles = [];
                       const files = sortFileNames(idData.e);
                       files.map((file, idx) => {
-                        concateFiles.push(
-                          `${basePath}\\${writer}\\${grade}\\${file}`
-                        );
+                        concateFiles.push(`${basePath}\\${writer}\\${grade}\\${file}`);
 
                         if (idx !== files.length) {
                           concateFiles.push(silenceFilePath);
@@ -177,18 +208,14 @@ const generateAudioFolder = async (fileList) => {
                       });
 
                       tmp.push(`${mediaSavePath}`);
-                      concatenateMP3Files(
-                        concateFiles,
-                        mediaSavePath,
-                        (err) => {
-                          if (err) {
-                            console.error("Failed to concatenate files:", err);
-                            reject(err);
-                          } else {
-                            resolve();
-                          }
+                      concatenateMP3Files(concateFiles, mediaSavePath, (err) => {
+                        if (err) {
+                          console.error("Failed to concatenate files:", err);
+                          reject(err);
+                        } else {
+                          resolve();
                         }
-                      );
+                      });
                     });
                   })
                 );
@@ -251,30 +278,21 @@ const generateAudioFolder = async (fileList) => {
                         const files = sortFileNames(fileList);
 
                         files.map((file, idx) => {
-                          concateFiles.push(
-                            `${basePath}\\${writer}\\${grade}\\${file}`
-                          );
+                          concateFiles.push(`${basePath}\\${writer}\\${grade}\\${file}`);
 
                           if (idx !== files.length) {
                             concateFiles.push(silenceFilePath);
                           }
                         });
 
-                        concatenateMP3Files(
-                          concateFiles,
-                          mediaSavePath,
-                          (err) => {
-                            if (err) {
-                              console.error(
-                                "Failed to concatenate files:",
-                                err
-                              );
-                              reject(err);
-                            } else {
-                              resolve();
-                            }
+                        concatenateMP3Files(concateFiles, mediaSavePath, (err) => {
+                          if (err) {
+                            console.error("Failed to concatenate files:", err);
+                            reject(err);
+                          } else {
+                            resolve();
                           }
-                        );
+                        });
                       });
                     })
                   );
@@ -298,7 +316,12 @@ const generateAudioFolder = async (fileList) => {
   }
 };
 
-function getMp3Files(directoryPaths) {
+/**
+ * @description fuction: 해당 경로에소 mp3 음원 파일명을 배열로 반환
+ * @param {string[]} directoryPaths 편집할 진단평가 음원 원본 폴더 상세 경로
+ * @return {string[]} 파일명
+ */
+const getMp3Files = (directoryPaths) => {
   const mp3Files = {};
   directoryPaths.forEach((dirPath) => {
     try {
@@ -310,21 +333,14 @@ function getMp3Files(directoryPaths) {
     }
   });
   return mp3Files;
-}
+};
 
-const generateAudioCheckFiles = async (writer, grade) => {
+/**
+ * @description fuction: 진단평가용 음원 합본 기능
+ */
+const generateAudioCheckFiles = async () => {
   const startTime = new Date();
-  console.log(
-    `Start Time: ${startTime.toLocaleTimeString("en-US", { hour12: false })}`
-  );
-  const directoryPaths = [
-    "D:\\aidt\\진단평가\\audio\\Ham\\Ham3",
-    "D:\\aidt\\진단평가\\audio\\Ham\\Ham4",
-    "D:\\aidt\\진단평가\\audio\\Lee\\Lee3",
-    "D:\\aidt\\진단평가\\audio\\Lee\\Lee4",
-    "D:\\aidt\\진단평가\\audio\\Kim\\Kim3",
-    "D:\\aidt\\진단평가\\audio\\Kim\\Kim4",
-  ];
+  console.log(`Start Time: ${startTime.toLocaleTimeString("en-US", { hour12: false })}`);
 
   const mp3Files = getMp3Files(directoryPaths);
   const fileList = {};
@@ -333,6 +349,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
     const split = dir.split("\\");
     const writer = split[4];
     const grade = split[5];
+
     fileList[writer] = fileList[writer]
       ? {
           ...fileList[writer],
@@ -342,13 +359,12 @@ const generateAudioCheckFiles = async (writer, grade) => {
           [grade]: {},
         };
   }
-  console.log(fileList);
 
   for (const [dirPath, files] of Object.entries(mp3Files)) {
     const split = dirPath.split("\\");
     const writer = split[4];
     const grade = split[5];
-    console.log(`Path: ${dirPath}`);
+
     files.forEach((file) => {
       const fileSplit = file.replace(".mp3", "").split("_");
       const chapter = `${fileSplit[0]}_${fileSplit[1]}`;
@@ -361,9 +377,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
               [id]: fileList[writer][grade][chapter][id]
                 ? {
                     ...fileList[writer][grade][chapter][id],
-                    e: fileList[writer][grade][chapter][id].e
-                      ? [...fileList[writer][grade][chapter][id].e, file]
-                      : [file],
+                    e: fileList[writer][grade][chapter][id].e ? [...fileList[writer][grade][chapter][id].e, file] : [file],
                   }
                 : {
                     e: [file],
@@ -376,7 +390,6 @@ const generateAudioCheckFiles = async (writer, grade) => {
             };
       } else if (fileSplit.length > 3) {
         const type = fileSplit[3];
-        const concateNum = fileSplit[4];
         if (id.includes(".mp3")) console.log(file);
 
         if (type.includes("e")) {
@@ -386,9 +399,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
                 [id]: fileList[writer][grade][chapter][id]
                   ? {
                       ...fileList[writer][grade][chapter][id],
-                      e: fileList[writer][grade][chapter][id].e
-                        ? [...fileList[writer][grade][chapter][id].e, file]
-                        : [file],
+                      e: fileList[writer][grade][chapter][id].e ? [...fileList[writer][grade][chapter][id].e, file] : [file],
                     }
                   : {
                       e: [file],
@@ -406,9 +417,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
                 [id]: fileList[writer][grade][chapter][id]
                   ? {
                       ...fileList[writer][grade][chapter][id],
-                      q: fileList[writer][grade][chapter][id].q
-                        ? [...fileList[writer][grade][chapter][id].q, file]
-                        : [file],
+                      q: fileList[writer][grade][chapter][id].q ? [...fileList[writer][grade][chapter][id].q, file] : [file],
                     }
                   : {
                       q: [file],
@@ -428,14 +437,6 @@ const generateAudioCheckFiles = async (writer, grade) => {
     });
   }
 
-  console.log(fileList.Lee.Lee3);
-  console.log(fileList.Lee.Lee4);
-  console.log(fileList.Ham.Ham3);
-  console.log(fileList.Ham.Ham4);
-  console.log(fileList.Kim.Kim3);
-  console.log(fileList.Kim.Kim4);
-  console.log(fileList.Kim.Kim4.KimTest4_3);
-
   try {
     await generateAudioFolder(fileList);
     await cleanUpSilenceFile();
@@ -444,9 +445,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
     const totalTime = new Date(endTime - startTime).toISOString().slice(11, 19);
 
     console.log("Complete");
-    console.log(
-      `Complete Time: ${endTime.toLocaleTimeString("en-US", { hour12: false })}`
-    );
+    console.log(`Complete Time: ${endTime.toLocaleTimeString("en-US", { hour12: false })}`);
     console.log(`Total Time: ${totalTime}`);
   } catch (err) {
     await cleanUpSilenceFile();
@@ -454,9 +453,7 @@ const generateAudioCheckFiles = async (writer, grade) => {
     const endTime = new Date();
     const totalTime = new Date(endTime - startTime).toISOString().slice(11, 19);
 
-    console.log(
-      `Error Time: ${endTime.toLocaleTimeString("en-US", { hour12: false })}`
-    );
+    console.log(`Error Time: ${endTime.toLocaleTimeString("en-US", { hour12: false })}`);
     console.log(`Total Time: ${totalTime}`);
     console.error("Error generating audio folder:", err);
   }
@@ -464,4 +461,5 @@ const generateAudioCheckFiles = async (writer, grade) => {
 
 ffmpeg.setFfmpegPath(ffmpegPath);
 ffmpeg.setFfprobePath(ffprobePath);
+
 generateAudioCheckFiles();

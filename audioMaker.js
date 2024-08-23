@@ -10,16 +10,14 @@ const { decode_range, encode_cell } = utils;
  * repository: https://github.com/dn-soft/aidt-contents
  */
 const basePath = "D:\\aidt\\aidt-contents\\resource";
-// const basePath = "C:\\Users\\silen\\Desktop\\aidt\\aidt-contents\\resource";
 /**
  * @type {string} 생성파일 임시 저장 경로
  */
-const inputDir = "D:\\aidt\\audioMerge\\audios";
+const inputDir = "C:\\Users\\silen\\Desktop\\audioMaker\\audios";
 /**
  * @type {string} 저장할 폴더 경로
  */
 const destDir = "D:\\aidt\\audioFiles";
-// const destDir = "C:\\Users\\silen\\Desktop\\aidt\\audioFiles";
 /**
  * @type {number} 합치는 audio사이 공백시간
  */
@@ -28,11 +26,11 @@ const duration = 0.6;
  * @type {["kim:3", "kim:4", "lee:3", "lee:4", "ham:3", "ham:4"]} 오디오 병합할 저자:학년 리스트
  */
 const list = ["kim:3"];
-
 /**
  * @description fuction: 해당 경로에 폴더가 있는지 검사
  * @param {string} filePath 폴더 경로
  */
+
 const ensureDirectoryExistence = (filePath) => {
   if (fs.existsSync(filePath)) {
     return true;
@@ -156,12 +154,18 @@ const generateAudioFolder = async (writer, grade, group) => {
         const mediaBasePath = `${destDir}\\${writer}\\${grade}\\${Number(
           chapter
         )}\\${id}\\media`;
+
         ensureDirectoryExistence(mediaBasePath);
 
         Object.entries(audioArr).forEach((audioSource) => {
           const audioType = audioSource[0];
           const audioFileList = audioSource[1];
 
+          /**
+           * q === 문제음원
+           * c === 선택지 음원
+           * a === 정답음원
+           */
           if (audioType === "q") {
             const mediaSavePath = `${mediaBasePath}\\${audioType}1.mp3`;
 
@@ -729,6 +733,11 @@ const generateAudioFolder = async (writer, grade, group) => {
  * @param {"lee" | "kim" | "ham"} writer 저자
  * @param {3 | 4} grade 학년
  */
+/**
+ * @description fuction: Exel import 및 분류
+ * @param {"lee" | "kim" | "ham"} writer 저자
+ * @param {3 | 4} grade 학년
+ */
 const importExel = async (writer, grade) => {
   const startTime = new Date();
   console.log(
@@ -772,8 +781,9 @@ const importExel = async (writer, grade) => {
    *      [grade: 3 | 4]: {
    *        [chapter: number]: {
    *          [id: string]: {
-   *            q?: <string>[]  // 문제 filename insert
-   *            c?: <string>[]  // 선택지 filename insert
+   *            q?: <string>[]  // 문제음원 filename insert
+   *            c?: <string>[]  // 선택지음원 filename insert
+   *            a?: <string>[]  // 정답음원 filename insert
    *          }
    *        }
    *      }
@@ -791,6 +801,8 @@ const importExel = async (writer, grade) => {
       const grade = id[1];
       const chapter = Number(id.slice(2, 4));
 
+      //  Number(audioType) === 9 => 정답음원
+      //  Number(audioType) > 4 => 불필요한 음원
       if (
         Number(audioType) === 9 &&
         (id?.includes("S") || id?.includes("A2") || id?.includes("P3"))
@@ -872,15 +884,6 @@ const importExel = async (writer, grade) => {
       }
     });
   });
-
-  // const jsonData = JSON.stringify(group);
-  // fs.writeFile("output.json", jsonData, (err) => {
-  //   if (err) {
-  //     console.error("Error writing file:", err);
-  //   } else {
-  //     console.log("JSON file has been saved.");
-  //   }
-  // });
 
   try {
     await generateAudioFolder(writer, grade, group);
