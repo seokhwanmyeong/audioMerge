@@ -885,6 +885,16 @@ const importExel = async (writer, grade) => {
     });
   });
 
+  //  생성파일 리스트
+  const jsonData = JSON.stringify(group);
+  fs.writeFile("output.json", jsonData, (err) => {
+    if (err) {
+      console.error("Error writing file:", err);
+    } else {
+      console.log("JSON file has been saved.");
+    }
+  });
+
   try {
     await generateAudioFolder(writer, grade, group);
     await cleanUpSilenceFile();
